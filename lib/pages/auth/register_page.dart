@@ -99,9 +99,6 @@ class RegisterPage extends StatelessWidget {
                       isShow: isShow,
                       hintText: 'Enter your password',
                       changeSuffixIcon: () {
-                        // setState(() {
-                        //   isShow = !isShow;
-                        // });
                       },
                     ),
                   ],
@@ -121,12 +118,10 @@ class RegisterPage extends StatelessWidget {
                         );
                       } on FirebaseAuthException catch (e) {
                         if (e.code == 'weak-password') {
-                          print('The password provided is too weak.');
-                        } else if (e.code == 'email-already-in-use') {
-                          print('The account already exists for that email.');
-                        }
+                           } else if (e.code == 'email-already-in-use') {
+                           }
                       } catch (e) {
-                        print(e);
+
                       }
                     }
                   },
