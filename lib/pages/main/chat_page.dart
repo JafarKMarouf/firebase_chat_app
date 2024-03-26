@@ -1,11 +1,15 @@
+// ignore_for_file: use_build_context_synchronously, must_be_immutable, avoid_print, unused_import
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:firebase_app/components/chat_bubble.dart';
 import 'package:firebase_app/components/constant.dart';
+import 'package:firebase_app/cubits/chat_cubit/chat_cubit.dart';
 import 'package:firebase_app/models/messages.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../components/custom_widget.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../components/custom_widget.dart';
 
 class ChatPage extends StatelessWidget {
   ChatPage({super.key});
@@ -17,9 +21,12 @@ class ChatPage extends StatelessWidget {
   String message = '';
 
   GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  // List<Message> messageList = [];
+
   @override
   Widget build(context) {
     final email = ModalRoute.of(context)!.settings.arguments;
+    print('===========email in chat screen ${email.toString()}=============');
     return Scaffold(
         appBar: AppBar(
           centerTitle: true,
@@ -47,14 +54,15 @@ class ChatPage extends StatelessWidget {
                   // SharedPreferences shared = await SharedPreferences.getInstance();
                   // shared.remove('email');
                   AwesomeDialog(
-                    context:context,
+                    context: context,
                     dialogType: DialogType.success,
                     animType: AnimType.rightSlide,
                     title: 'Sign Out',
                     desc: 'you have already sign out!',
                     btnCancelOnPress: () {},
                     btnOkOnPress: () {
-                      Navigator.of(context).pushNamedAndRemoveUntil('login', (route) => false);
+                      Navigator.of(context)
+                          .pushNamedAndRemoveUntil('login', (route) => false);
                     },
                   ).show();
                 },
@@ -63,51 +71,26 @@ class ChatPage extends StatelessWidget {
         ),
         body: Column(
           children: [
-            StreamBuilder<QuerySnapshot>(
-                stream: messages.orderBy('createdAt',descending: true).snapshots(),
-                builder: (BuildContext context,
-                    AsyncSnapshot<QuerySnapshot> snapshot) {
-                  if (!snapshot.hasData) {
-                    return const Expanded(
-                      child:  Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  } else {
-                    List<Message> messageList = [];
-                    for (int i = 0; i < snapshot.data!.docs.length; i++) {
-                      messageList.add(Message.fromJson(snapshot.data!.docs[i]));
-                    }
-                    return (snapshot.data!.docs.isNotEmpty)?
-                      Expanded(
-                        child: ListView.builder(
-                          reverse: true,
-                          controller: scrollController,
-                            itemCount: messageList.length,
-                            itemBuilder: (context, index) {
-                              return (email == messageList[index].email) ?
-                              ChatBubble(
-                                  message: messageList[index],
-                              ): ChatBubbleFriend(
-                                message: messageList[index],
+            Expanded(
+              child: BlocBuilder<ChatCubit, ChatState>(
+                builder: (context, state) {
+                  return ListView.builder(
+                      reverse: true,
+                      controller: scrollController,
+                      itemCount:BlocProvider.of<ChatCubit>(context).messageList.length,
+                      itemBuilder: (context, index) {
+                        return (email == BlocProvider.of<ChatCubit>(context).messageList[index].email)
+                            ? ChatBubble(
+                          message: BlocProvider.of<ChatCubit>(context).messageList[index],
+
+                              )
+                            : ChatBubbleFriend(
+                                message: BlocProvider.of<ChatCubit>(context).messageList[index],
                               );
-                            }),
-                      ):
-                      const Expanded(
-                      child: Center(
-                          child: Text(
-                            'Not found any message yet',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 25,
-                              color: Colors.grey,
-                            ),
-                            textAlign: TextAlign.center,
-                          )
-                      ),
-                    );
-                  }
-                }),
+                      });
+                },
+              ),
+            ),
             Form(
               key: formKey,
               child: Container(
@@ -122,18 +105,14 @@ class ChatPage extends StatelessWidget {
                   },
                   onSubmit: (data) {
                     if (formKey.currentState!.validate()) {
-                      messages.add({
-                        'body': data,
-                        'createdAt':DateTime.now(),
-                        'email' : email,
-                      });
+                      BlocProvider.of<ChatCubit>(context).receiveMessage();
                       messageController.clear();
-                      scrollController.animateTo(
-                          0.0,
-                          // scrollController.position.maxScrollExtent,
-                          duration: const Duration(milliseconds: 300,),
-                          curve: Curves.fastOutSlowIn
-                      );
+                      // scrollController.animateTo(0.0,
+                      //     // scrollController.position.maxScrollExtent,
+                      //     duration: const Duration(
+                      //       milliseconds: 300,
+                      //     ),
+                      //     curve: Curves.fastOutSlowIn);
                     }
                     return null;
                   },
@@ -145,16 +124,17 @@ class ChatPage extends StatelessWidget {
                     if (formKey.currentState!.validate()) {
                       messages.add({
                         'body': message,
-                        'createdAt':DateTime.now(),
-                        'email' : email,
+                        'createdAt': DateTime.now(),
+                        'email': email,
                       });
                       messageController.clear();
                       scrollController.animateTo(
                           // scrollController.position.maxScrollExtent,
                           0.0,
-                          duration: const Duration(milliseconds: 300,),
-                          curve: Curves.fastOutSlowIn
-                      );
+                          duration: const Duration(
+                            milliseconds: 300,
+                          ),
+                          curve: Curves.fastOutSlowIn);
                     }
                   },
                   customController: messageController,
